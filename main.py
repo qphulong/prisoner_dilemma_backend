@@ -1,7 +1,8 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from classes.games_manager import PrisonerDilemmaGamesManager
 
-app = FastAPI()
+app = FastAPI(title="Prisoner's Dilemma API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -10,22 +11,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# connected WebSocket clients
-clients = []
+games_manager = PrisonerDilemmaGamesManager()
 
 @app.get("/")
 def home():
-    return {"message": "WebSocket chat server running"}
+    return {"message": "Prisoner's Dilemma backend is running."}
 
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    clients.append(websocket)
+@app.post("/create-game")
+def create_game():
     try:
-        while True:
-            data = await websocket.receive_json()
-            # data = {"user": "1", "text": "Hello!"}
-            for client in clients:
-                await client.send_json(data)  # broadcast to everyone
-    except WebSocketDisconnect:
-        clients.remove(websocket)
+        game_id = games_manager.create_game()
+        return {"game_id": game_id}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@app.get("/get-all-games-id")
+def get_all_game_id():
+    try:
+        resutls = games_manager.list_all_games_id()
+        return {"results": resutls}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@app.delete("/remove-all-games")
+def remove_all_games():
+    try:
+        games_manager.remove_all_games()
+        return {"message": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
