@@ -41,6 +41,7 @@ def get_all_game_id():
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
+# DO NOT Release
 @app.delete("/remove-all-games")
 def remove_all_games():
     try:
@@ -55,17 +56,23 @@ def close_game_entry(hostAuth: HostAuth):
     Host API to close game entry.
     After this, no additional players can join.
     """
-
-    game = games_manager.get_game_by_id(hostAuth.game_id)
-    if game is None:
+    try:
+        game = games_manager.host_auth(
+            game_id=hostAuth.game_id,
+            game_password=hostAuth.game_password
+        )
+    except KeyError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Game not found"
         )
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid game password"
+        )
 
-    # 2. Attempt to close entry → any failure returns fail
     success = game.close_entry(hostAuth)
-
     if not success:
         return {"status": "fail"}
 
@@ -99,4 +106,41 @@ def register_player(player_register_model: PlayerRegisterModel):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Host closed game entry"
         )
+    
+# DO NOT Release
+@app.post("/creat-sample-data")
+def create_sample_data():
+    try:
+        new_game_id, new_game_password = games_manager._create_sample_data()
+        return {
+            "game_id": new_game_id,
+            "game_password": new_game_password,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@app.post("/list-all-players-by-game-id")
+def list_all_players_by_game_id(hostAuth: HostAuth):
+    """This should be a GET but GET does not have a body and i am lazy this part"""
+    try:
+        game = games_manager.host_auth(
+            game_id=hostAuth.game_id,
+            game_password=hostAuth.game_password
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Game not found"
+        )
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid game password"
+        )
+    
+    players_list = [
+        {"player_name": player.player_name, "player_id": player.player_id}
+        for player in game.players.values()
+    ]
+    return {"players": players_list}
     

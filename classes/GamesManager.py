@@ -4,6 +4,8 @@ from classes.GameConfig import GameConfig
 from models.GameConfig import GameConfigModel
 import string
 from utils.utils_func import generate_4_char_code
+from typing import Dict
+from classes.Player import Player
 
 class PrisonerDilemmaGamesManager:
     """
@@ -12,7 +14,7 @@ class PrisonerDilemmaGamesManager:
 
     _instance = None
     MAX_GAMES = 5
-    games = {}
+    games: Dict[str, Game] = {}
 
     def __new__(cls):
         if cls._instance is None:
@@ -70,3 +72,38 @@ class PrisonerDilemmaGamesManager:
     
     def remove_all_games(self):
         self.games.clear()
+        
+    def host_auth(self, game_id:str, game_password: str):
+        if game_id not in self.games:
+            raise KeyError(f"Game with ID {game_id} not found")
+
+        game = self.games[game_id]
+        if game.game_password != game_password:
+            raise PermissionError("Invalid game password")
+        return game
+        
+    # DO NOT expose this
+    def _create_sample_data(self):
+        if len(self.games) >= self.MAX_GAMES:
+            raise Exception("Maximum number of games reached")
+
+        game_id = self._generate_game_id()
+        game_password = generate_4_char_code()
+        
+        new_game_config = GameConfig()
+
+        self.games[game_id] = Game(
+            game_id=game_id,
+            game_config=new_game_config,
+            game_password=game_password,
+        )
+    
+        for i in range(0,8):
+            new_player = Player(
+                game_id=game_id,
+                player_name=f"Player_{i}",
+                player_id=f"Player_{i}",
+                player_password=generate_4_char_code()
+            )
+            self.games[game_id].register_new_player(new_player)
+        return game_id, game_password

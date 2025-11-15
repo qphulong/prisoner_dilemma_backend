@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 from classes.GameConfig import GameConfig
 from models.HostAuth import HostAuth
 from classes.Player import Player
@@ -19,7 +19,7 @@ class Game:
         self.game_config = game_config
         self.game_password = game_password # simple password for host to orchestra the game
         
-        self.players = {}
+        self.players: Dict[str, Player] = {}
         
     def close_entry(self, auth: HostAuth) -> bool:
         """
