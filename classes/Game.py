@@ -3,12 +3,14 @@ from classes.GameConfig import GameConfig
 from models.HostAuth import HostAuth
 from classes.Player import Player
 from utils.utils_func import generate_4_char_code
+import time
 
 class Game:
     """
     A Game class, the host able to control this class
     """
-
+    INACTIVITY_TIMEOUT = 300 
+    
     def __init__(
         self, 
         game_id: str,
@@ -20,6 +22,8 @@ class Game:
         self.game_password = game_password # simple password for host to orchestra the game
         
         self.players: Dict[str, Player] = {}
+        
+        self.last_update_ts = time.time()
         
     def close_entry(self, auth: HostAuth) -> bool:
         """
@@ -47,3 +51,11 @@ class Game:
         new_player.player_password = player_password
         self.players[new_player.player_password] = new_player
         return True
+    
+    def touch(self):
+        """IMPORTANT: Call this every time update the Game object"""
+        self.last_update_ts = time.time()
+
+    def is_expired(self) -> bool:
+        """Check if the game should be auto-removed."""
+        return (time.time() - self.last_update_ts) > self.INACTIVITY_TIMEOUT

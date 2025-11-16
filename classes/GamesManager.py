@@ -2,6 +2,8 @@ import random
 from classes.Game import Game
 from classes.GameConfig import GameConfig
 from models.GameConfig import GameConfigModel
+import threading
+import time
 import string
 from utils.utils_func import generate_4_char_code
 from typing import Dict
@@ -15,12 +17,33 @@ class PrisonerDilemmaGamesManager:
     _instance = None
     MAX_GAMES = 5
     games: Dict[str, Game] = {}
+    
+    CLEANUP_INTERVAL = 10
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.games = {}
+            cls._instance.start_cleanup_thread()
         return cls._instance
+    
+    def start_cleanup_thread(self):
+        t = threading.Thread(target=self._cleanup_loop, daemon=True)
+        t.start()
+
+    def _cleanup_loop(self):
+        while True:
+            time.sleep(self.CLEANUP_INTERVAL)
+            now = time.time()
+
+            expired_ids = [
+                game_id for game_id, game in self.games.items()
+                if game.is_expired()
+            ]
+
+            for gid in expired_ids:
+                print(f"[CLEANUP] Removing inactive game: {gid}")
+                del self.games[gid]
 
     def _generate_game_id(self) -> str:
         """Generate a unique 4-digit game code."""
