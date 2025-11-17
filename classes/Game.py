@@ -25,6 +25,8 @@ class Game:
         
         self.last_update_ts = time.time()
         
+        self.current_round = 1
+        
     def close_entry(self, auth: HostAuth) -> bool:
         """
         Host closes the game entry so no new players can join.
