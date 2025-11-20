@@ -10,5 +10,5 @@ class Player:
         self.player_name = player_name
         self.player_id = player_id
         self.player_password = player_password
-        
+        self.points_gained = 0
         self.choices = []
