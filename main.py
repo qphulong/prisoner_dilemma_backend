@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from classes.GamesManager import PrisonerDilemmaGamesManager
 from models.GameConfig import GameConfigModel
 from models.HostAuth import HostAuth
 from models.PlayerRegister import PlayerRegisterModel
 from classes.Player import Player
+import json
+import asyncio
 
 app = FastAPI(title="Prisoner's Dilemma API")
 
@@ -16,6 +18,47 @@ app.add_middleware(
 )
 
 games_manager = PrisonerDilemmaGamesManager()
+
+@app.websocket("/ws/{game_id}")
+async def websocket_endpoint(websocket: WebSocket, game_id: str):
+    game = games_manager.games.get(game_id)
+    if not game:
+        await websocket.close(code=1011, reason="Game not found")
+        return
+
+    ws_manager = game.web_socket_manager
+
+    await websocket.accept()           # ONLY PLACE accept() is called
+    print(f"[WS] Connection accepted for game {game_id}")
+
+    try:
+        first_msg = await websocket.receive_json()
+    except:
+        await websocket.close(code=1008)
+        return
+
+    role = first_msg.get("role")
+
+    if role == "host":
+        await ws_manager.connect_host(websocket)        # no accept() inside
+
+    elif role == "player":
+        player_id = first_msg.get("player_id")
+        # if not player_id or player_id not in game.players:
+        #     await websocket.close(code=1008)
+        #     return
+        await ws_manager.connect_player(websocket, player_id)  # no accept() inside
+
+    else:
+        await websocket.close(code=1008)
+        return
+
+    # Main loop
+    try:
+        while True:
+            await websocket.receive_json()
+    except WebSocketDisconnect:
+        await ws_manager.disconnect(websocket)
 
 @app.get("/")
 def home():

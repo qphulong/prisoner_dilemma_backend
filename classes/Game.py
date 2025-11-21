@@ -2,6 +2,7 @@ from typing import Optional, Dict
 from classes.GameConfig import GameConfig
 from models.HostAuth import HostAuth
 from classes.Player import Player
+from classes.WebSocketManager import WebSocketManager
 from utils.utils_func import generate_4_char_code
 import time
 
@@ -19,13 +20,15 @@ class Game:
         ):
         self.game_id = game_id
         self.game_config = game_config
-        self.game_password = game_password # simple password for host to orchestra the game
+        self.game_password = game_password
         
         self.players: Dict[str, Player] = {}
         
         self.last_update_ts = time.time()
         
         self.current_round = 1
+        
+        self.web_socket_manager = WebSocketManager()
         
     def close_entry(self, auth: HostAuth) -> bool:
         """
