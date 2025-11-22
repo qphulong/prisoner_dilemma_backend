@@ -17,15 +17,15 @@ class WebSocketManager:
             "players": list(self.players_connections.keys())
         })
 
-    async def connect_player(self, websocket: WebSocket, player_id: str):
-        # Remove accept() here too
+    async def connect_player(self, websocket: WebSocket, player_id: str, player_name: str):
         self.players_connections[player_id] = websocket
         print(f"[WS] Player {player_id} connected")
 
         if self.host_connection:
             await self.host_connection.send_json({
                 "type": "player_joined",
-                "player_id": player_id
+                "player_id": player_id,
+                "player_name": player_name,
             })
 
     async def disconnect(self, websocket: WebSocket):
@@ -49,4 +49,30 @@ class WebSocketManager:
             try:
                 await ws.send_json(msg)
             except:
-                pass  # will be cleaned on next disconnect
+                pass
+    
+    async def send_game_expired(self):
+        message = {
+            "type": "game_expired",
+            "reason": "inactivity_timeout",
+            "message": "This game has expired due to inactivity."
+        }
+
+        # Host
+        if self.host_connection and self.host_connection.client_state.CONNECTED:
+            try:
+                await self.host_connection.send_json(message)
+                await self.host_connection.close(code=1000)
+            except:
+                pass
+            self.host_connection = None
+
+        # Players
+        for player_id, ws in list(self.players_connections.items()):
+            if ws.client_state.CONNECTED:
+                try:
+                    await ws.send_json(message)
+                    await ws.close(code=1000)
+                except:
+                    pass
+            self.players_connections.pop(player_id, None)

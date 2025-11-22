@@ -8,6 +8,8 @@ import string
 from utils.utils_func import generate_4_char_code
 from typing import Dict
 from classes.Player import Player
+import asyncio
+from concurrent.futures import TimeoutError as FutureTimeoutError
 
 class PrisonerDilemmaGamesManager:
     """
@@ -32,18 +34,32 @@ class PrisonerDilemmaGamesManager:
         t.start()
 
     def _cleanup_loop(self):
+        from main import loop
         while True:
             time.sleep(self.CLEANUP_INTERVAL)
             now = time.time()
 
-            expired_ids = [
-                game_id for game_id, game in self.games.items()
+            expired_games = [
+                (game_id, game)
+                for game_id, game in list(self.games.items())
                 if game.is_expired()
             ]
 
-            for gid in expired_ids:
-                print(f"[CLEANUP] Removing inactive game: {gid}")
-                del self.games[gid]
+            for game_id, game in expired_games:
+                print(f"[CLEANUP] Removing inactive game: {game_id} (expired)")
+
+                try:
+                    coro = game.web_socket_manager.send_game_expired()
+                    future = asyncio.run_coroutine_threadsafe(coro, loop)  # 'loop' is the global from main.py
+                    future.result(timeout=5)
+                    print(f"[CLEANUP] Sent expired message to game {game_id}")
+                except FutureTimeoutError:
+                    print(f"[CLEANUP] Timeout sending expired message to game {game_id}")
+                except Exception as e:
+                    print(f"[CLEANUP] Failed to send expired message to game {game_id}: {e}")
+
+                # Now delete
+                self.games.pop(game_id, None)
 
     def _generate_game_id(self) -> str:
         """Generate a unique 4-digit game code."""

@@ -37,6 +37,7 @@ class Game:
         Returns:
             True if closed successfully, False if authentication failed.
         """
+        self.touch()
         if auth.game_id != self.game_id or auth.game_password != self.game_password:
             return False
 

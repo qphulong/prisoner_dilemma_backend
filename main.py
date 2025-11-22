@@ -17,6 +17,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+loop = None
+
+@app.on_event("startup")
+async def startup_event():
+    global loop
+    loop = asyncio.get_running_loop()
+    print(f"[STARTUP] Event loop stored: {loop}")
+
 games_manager = PrisonerDilemmaGamesManager()
 
 @app.websocket("/ws/{game_id}")
@@ -28,7 +36,7 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
 
     ws_manager = game.web_socket_manager
 
-    await websocket.accept()           # ONLY PLACE accept() is called
+    await websocket.accept()
     print(f"[WS] Connection accepted for game {game_id}")
 
     try:
@@ -40,14 +48,15 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
     role = first_msg.get("role")
 
     if role == "host":
-        await ws_manager.connect_host(websocket)        # no accept() inside
+        await ws_manager.connect_host(websocket)
 
     elif role == "player":
         player_id = first_msg.get("player_id")
+        player_name = first_msg.get("player_name")
         # if not player_id or player_id not in game.players:
         #     await websocket.close(code=1008)
         #     return
-        await ws_manager.connect_player(websocket, player_id)  # no accept() inside
+        await ws_manager.connect_player(websocket, player_id, player_name)
 
     else:
         await websocket.close(code=1008)
