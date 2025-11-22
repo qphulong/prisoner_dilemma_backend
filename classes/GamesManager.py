@@ -80,10 +80,10 @@ class PrisonerDilemmaGamesManager:
 
         return game_id, game_password
 
-    def get_game_by_id(self, game_id: str) -> Game:
-        if game_id not in self.games:
-            raise KeyError(f"Game {game_id} not found")
-        return self.games[game_id]
+    def get_game_by_id(self, game_id: str) -> Game | None:
+        if game_id in self.games:
+            return self.games[game_id]
+        return None
 
     def remove_game_by_id(self, game_id: str):
         """Remove a game from memory."""

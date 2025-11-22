@@ -47,8 +47,7 @@ class Game:
         """
         Register new player, force to try if password existed.
         """
-        if not self.game_config.allow_player_to_join: # cannot enter closed game
-            return False
+        self.touch()
         while True:
             player_password = generate_4_char_code()
             if player_password not in self.players:

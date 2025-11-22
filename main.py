@@ -123,32 +123,39 @@ def close_game_entry(hostAuth: HostAuth):
     
 @app.post("/register-player")
 def register_player(player_register_model: PlayerRegisterModel):
+    # 1. Game not found → 404
     game = games_manager.get_game_by_id(player_register_model.game_id)
-    
     if game is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Game with ID {player_register_model.game_id} not found"
         )
-    
+
+    # 2. Player ID already taken → 400
+    if any(p.player_id == player_register_model.player_id for p in game.players.values()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Player ID '{player_register_model.player_id}' existed."
+        )
+
+    # Game is closed for new players?
+    if not game.game_config.allow_player_to_join:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Host has closed game entry"
+        )
+
+    # Create and register the new player (password generated inside Game)
     new_player = Player(
         game_id=player_register_model.game_id,
         player_name=player_register_model.player_name,
         player_id=player_register_model.player_id,
-        player_password="temp"
+        player_password=None  # will be set by Game.register_new_player
     )
-    
-    register_status = game.register_new_player(new_player)
-    
-    if register_status:
-        return {
-            "player_password": new_player.player_password
-        }
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Host closed game entry"
-        )
+
+    player_password = game.register_new_player(new_player)
+
+    return {"player_password": player_password}
     
 # DO NOT Release
 @app.post("/creat-sample-data")
