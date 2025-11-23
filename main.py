@@ -53,10 +53,11 @@ async def websocket_endpoint(websocket: WebSocket, game_id: str):
     elif role == "player":
         player_id = first_msg.get("player_id")
         player_name = first_msg.get("player_name")
+        player_password = first_msg.get("player_password")
         # if not player_id or player_id not in game.players:
         #     await websocket.close(code=1008)
         #     return
-        await ws_manager.connect_player(websocket, player_id, player_name)
+        await ws_manager.connect_player(websocket, player_id, player_name, player_password)
 
     else:
         await websocket.close(code=1008)

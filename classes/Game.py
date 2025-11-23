@@ -28,7 +28,7 @@ class Game:
         
         self.current_round = 1
         
-        self.web_socket_manager = WebSocketManager()
+        self.web_socket_manager = WebSocketManager(game=self)
         
     def close_entry(self, auth: HostAuth) -> bool:
         """
@@ -44,7 +44,7 @@ class Game:
         self.game_config.allow_player_to_join = False
         return True
     
-    def register_new_player(self,new_player: Player):
+    def register_new_player(self,new_player: Player)->str:
         """
         Register new player, force to try if password existed.
         """
@@ -55,7 +55,7 @@ class Game:
                 break
         new_player.player_password = player_password
         self.players[new_player.player_password] = new_player
-        return True
+        return player_password
     
     def touch(self):
         """IMPORTANT: Call this every time update the Game object"""

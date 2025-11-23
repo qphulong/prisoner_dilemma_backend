@@ -1,24 +1,27 @@
+from __future__ import annotations
 from fastapi import WebSocket
-from typing import Dict, Optional
+from typing import Dict, Optional,TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from classes.Game import Game
 
 class WebSocketManager:
-    def __init__(self):
+    def __init__(self, game: Game):
+        self.game: Game = game
         self.host_connection: Optional[WebSocket] = None
         self.players_connections: Dict[str, WebSocket] = {}
 
     async def connect_host(self, websocket: WebSocket):
-        # Remove await websocket.accept() ← THIS WAS THE BUG
         self.host_connection = websocket
         print("[WS] Host registered in manager")
 
-        # Safe to send now (accept already happened in main.py)
         await websocket.send_json({
             "type": "current_players",
             "players": list(self.players_connections.keys())
         })
 
-    async def connect_player(self, websocket: WebSocket, player_id: str, player_name: str):
-        self.players_connections[player_id] = websocket
+    async def connect_player(self, websocket: WebSocket, player_id: str, player_name: str, player_password: str):
+        self.players_connections[player_password] = websocket
         print(f"[WS] Player {player_id} connected")
 
         if self.host_connection:
@@ -34,15 +37,28 @@ class WebSocketManager:
             print("[WS] Host disconnected")
             return
 
-        player_id = next((pid for pid, ws in self.players_connections.items() if ws == websocket), None)
-        if player_id:
-            del self.players_connections[player_id]
-            print(f"[WS] Player {player_id} left")
+        player_password = next((p_pass for p_pass, ws in self.players_connections.items() if ws == websocket), None)
+        if player_password and self.game.game_config.allow_player_to_join:
+            del self.players_connections[player_password]
+            self.game.players.pop(player_password, None)
+
+            print(f"[WS] Player {player_password} left")
             if self.host_connection:
                 await self.host_connection.send_json({
                     "type": "player_left",
-                    "player_id": player_id
+                    "player_password": player_password,
+                    "updated_player_list": [
+                        {
+                            "id": player.player_id,
+                            "name": player.player_name,
+                            "points": player.points_gained
+                        }
+                        for p_password, player in self.game.players.items()
+                    ]
                 })
+                
+        if player_password and not self.game.game_config.allow_player_to_join:
+            pass
 
     async def broadcast_to_players(self, msg: dict):
         for ws in self.players_connections.values():
