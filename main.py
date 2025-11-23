@@ -198,8 +198,54 @@ def list_all_players_by_game_id(hostAuth: HostAuth):
         )
     
     players_list = [
-        {"player_name": player.player_name, "player_id": player.player_id}
+        {"player_name": player.player_name, "player_id": player.player_id, "points_gained": player.points_gained}
         for player in game.players.values()
     ]
     return {"players": players_list}
+    
+@app.post("/host-get-game-info")
+def host_get_game_info(hostAuth: HostAuth):
+    """When loading host page, call this api to get the game info once"""
+    try:
+        game = games_manager.host_auth(
+            game_id=hostAuth.game_id,
+            game_password=hostAuth.game_password
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Game not found"
+        )
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid game password"
+        )
+
+    players_list = [
+        {
+            "player_name": player.player_name,
+            "player_id": player.player_id,
+            "points_gained": player.points_gained
+        }
+        for player in game.players.values()
+    ]
+
+    game_config = {
+        "points_both_cooperate": game.game_config.points_both_cooperate,
+        "points_defect_against_cooperate": game.game_config.points_defect_against_cooperate,
+        "points_cooperate_against_defect": game.game_config.points_cooperate_against_defect,
+        "points_both_defect": game.game_config.points_both_defect,
+        "allow_chat": game.game_config.allow_chat,
+        "anonymous_play": game.game_config.anonymous_play,
+        "round_time_limit": game.game_config.round_time_limit,
+        "number_of_rounds": game.game_config.number_of_rounds,
+        "show_round_count": game.game_config.show_round_count
+    }
+
+    return {
+        "current_round": game.current_round,
+        "players": players_list,
+        "game_config": game_config
+    }
     
