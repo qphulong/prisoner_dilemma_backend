@@ -130,6 +130,33 @@ def close_game_entry(hostAuth: HostAuth):
         return {"status": "fail"}
 
     return {"status": "success"}
+
+@app.patch("/open-game-entry")
+def open_game_entry(hostAuth: HostAuth):
+    """
+    Host API to re-open game entry if someone is late and wanna join :)).
+    """
+    try:
+        game = games_manager.host_auth(
+            game_id=hostAuth.game_id,
+            game_password=hostAuth.game_password
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Game not found"
+        )
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid game password"
+        )
+
+    success = game.open_entry(hostAuth)
+    if not success:
+        return {"status": "fail"}
+
+    return {"status": "success"}
     
 @app.post("/register-player")
 def register_player(player_register_model: PlayerRegisterModel):
@@ -241,7 +268,8 @@ def host_get_game_info(hostAuth: HostAuth):
         "anonymous_play": game.game_config.anonymous_play,
         "round_time_limit": game.game_config.round_time_limit,
         "number_of_rounds": game.game_config.number_of_rounds,
-        "show_round_count": game.game_config.show_round_count
+        "show_round_count": game.game_config.show_round_count,
+        "allow_player_to_join": game.game_config.allow_player_to_join
     }
 
     return {

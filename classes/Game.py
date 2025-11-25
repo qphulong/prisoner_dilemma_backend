@@ -44,6 +44,20 @@ class Game:
         self.game_config.allow_player_to_join = False
         return True
     
+    def open_entry(self, auth: HostAuth) -> bool:
+        """
+        Host re-open game entry.
+
+        Returns:
+            True if reopen successfully, False if authentication failed.
+        """
+        self.touch()
+        if auth.game_id != self.game_id or auth.game_password != self.game_password:
+            return False
+
+        self.game_config.allow_player_to_join = True
+        return True
+    
     def register_new_player(self,new_player: Player)->str:
         """
         Register new player, force to try if password existed.
