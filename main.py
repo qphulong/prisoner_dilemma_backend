@@ -278,3 +278,31 @@ def host_get_game_info(hostAuth: HostAuth):
         "game_config": game_config
     }
     
+@app.post("/host-edit-game-config")
+def host_get_game_info(hostAuth: HostAuth, new_config: GameConfigModel):
+    """When loading host page, call this api to get the game info once"""
+    try:
+        game = games_manager.host_auth(
+            game_id=hostAuth.game_id,
+            game_password=hostAuth.game_password
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Game not found"
+        )
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid game password"
+        )
+    game.game_config.allow_chat = new_config.allow_chat
+    game.game_config.anonymous_play = new_config.anonymous_play
+    game.game_config.round_time_limit = new_config.round_time_limit
+    game.game_config.number_of_rounds = new_config.number_of_rounds
+    game.game_config.show_round_count = new_config.show_round_count
+    game.game_config.points_both_cooperate = new_config.points_both_cooperate
+    game.game_config.points_both_defect = new_config.points_both_defect
+    game.game_config.points_cooperate_against_defect = new_config.points_cooperate_against_defect
+    game.game_config.points_defect_against_cooperate = new_config.points_defect_against_cooperate
+    return {"status": "success"}
